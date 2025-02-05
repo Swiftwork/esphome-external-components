@@ -46,6 +46,8 @@ AUTO_LOAD = ["binary_sensor"]
 CONF_RECEIVER_ID = "receiver_id"
 CONF_TRANSMITTER_ID = "transmitter_id"
 CONF_FIRST = "first"
+CONF_SEQUENCE_HIGHBITS = "sequence_highbits"
+CONF_SEQUENCE_LOWBITS = "sequence_lowbits"
 
 ns = remote_base_ns = cg.esphome_ns.namespace("remote_base")
 RemoteProtocol = ns.class_("RemoteProtocol")
@@ -1963,3 +1965,51 @@ async def mirage_action(var, config, args):
     vec_ = cg.std_vector.template(cg.uint8)
     template_ = await cg.templatable(config[CONF_CODE], args, vec_, vec_)
     cg.add(var.set_code(template_))
+
+
+# Housegard Origo
+(
+    HousegardOrigoData,
+    HousegardOrigoBinarySensor,
+    HousegardOrigoTrigger,
+    HousegardOrigoAction,
+    HousegardOrigoDumper,
+) = declare_protocol("HousegardOrigo")
+
+HOUSEGARD_ORIGO_SCHEMA = cv.Schema(
+    {
+        cv.Required(CONF_DEVICE): cv.hex_uint8_t,
+        cv.Required(CONF_SEQUENCE_HIGHBITS): cv.hex_uint32_t,
+        cv.Required(CONF_SEQUENCE_LOWBITS): cv.hex_uint32_t,
+    }
+)
+
+@register_binary_sensor("housegard_origo", HousegardOrigoBinarySensor, HOUSEGARD_ORIGO_SCHEMA)
+def housegard_origo_binary_sensor(var, config):
+    cg.add(
+        var.set_data(
+            cg.StructInitializer(
+                HousegardOrigoData,
+                ("device", config[CONF_DEVICE]),
+                ("sequence_highbits", config[CONF_SEQUENCE_HIGHBITS]),
+                ("sequence_lowbits", config[CONF_SEQUENCE_LOWBITS]),
+            )
+        )
+    )
+
+@register_trigger("housegard_origo", HousegardOrigoTrigger, HousegardOrigoData)
+def housegard_origo_trigger(var, config):
+    pass
+
+@register_dumper("housegard_origo", HousegardOrigoDumper)
+def housegard_origo_dumper(var, config):
+    pass
+
+@register_action("housegard_origo", HousegardOrigoAction, HOUSEGARD_ORIGO_SCHEMA)
+async def housegard_origo_action(var, config, args):
+    template_ = await cg.templatable(config[CONF_DEVICE], args, cg.uint8)
+    cg.add(var.set_device(template_))
+    template_ = await cg.templatable(config[CONF_SEQUENCE_HIGHBITS], args, cg.uint32)
+    cg.add(var.set_sequence_highbits(template_))
+    template_ = await cg.templatable(config[CONF_SEQUENCE_LOWBITS], args, cg.uint32)
+    cg.add(var.set_sequence_lowbits(template_))
