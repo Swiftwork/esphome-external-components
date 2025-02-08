@@ -23,6 +23,8 @@ void HousegardOrigoProtocol::encode_bit_(RemoteTransmitData *dst, bool value) co
 }
 
 void HousegardOrigoProtocol::encode(RemoteTransmitData *dst, const HousegardOrigoData &data) {
+  ESP_LOGD(TAG, "Encoding Housegard Origo signal...");
+
   // Encode device ID (8 bits)
   for (uint8_t i = 0; i < 8; i++) {
     this->encode_bit_(dst, data.device & (1 << i));
@@ -40,15 +42,21 @@ void HousegardOrigoProtocol::encode(RemoteTransmitData *dst, const HousegardOrig
 }
 
 optional<HousegardOrigoData> HousegardOrigoProtocol::decode(RemoteReceiveData src) {
+  ESP_LOGV(TAG, "Attempting to decode Housegard Origo signal... (size=%d)", src.size());
+
   HousegardOrigoData data{};
 
   // Need at least SEQUENCE_LEN * 2 items for mark/space pairs
-  if (src.size() < SEQUENCE_LEN * 2)
+  if (src.size() < SEQUENCE_LEN * 2) {
+    ESP_LOGV(TAG, "Signal too short for Housegard Origo protocol (%d < %d)", src.size(), SEQUENCE_LEN * 2);
     return {};
+  }
 
   // Validate initial timing
-  if (!src.expect_item(NARROW_PULSE, NARROW_PULSE))
+  if (!src.expect_item(NARROW_PULSE, NARROW_PULSE)) {
+    ESP_LOGV(TAG, "Failed to match initial timing for Housegard Origo protocol");
     return {};
+  }
 
   data.device = 0;
   data.sequence_highbits = 0;
@@ -59,6 +67,7 @@ optional<HousegardOrigoData> HousegardOrigoProtocol::decode(RemoteReceiveData sr
     if (src.expect_item(NARROW_PULSE, NARROW_PULSE)) {
       data.device |= (1 << i);
     } else if (!src.expect_item(WIDE_PULSE, WIDE_PULSE)) {
+      ESP_LOGV(TAG, "Failed to decode device ID at bit %d", i);
       return {};
     }
   }
@@ -68,6 +77,7 @@ optional<HousegardOrigoData> HousegardOrigoProtocol::decode(RemoteReceiveData sr
     if (src.expect_item(NARROW_PULSE, NARROW_PULSE)) {
       data.sequence_highbits |= (1 << i);
     } else if (!src.expect_item(WIDE_PULSE, WIDE_PULSE)) {
+      ESP_LOGV(TAG, "Failed to decode high bits at bit %d", i);
       return {};
     }
   }
@@ -77,10 +87,12 @@ optional<HousegardOrigoData> HousegardOrigoProtocol::decode(RemoteReceiveData sr
     if (src.expect_item(NARROW_PULSE, NARROW_PULSE)) {
       data.sequence_lowbits |= (1 << i);
     } else if (!src.expect_item(WIDE_PULSE, WIDE_PULSE)) {
+      ESP_LOGV(TAG, "Failed to decode low bits at bit %d", i);
       return {};
     }
   }
 
+  ESP_LOGV(TAG, "Successfully decoded Housegard Origo signal!");
   return data;
 }
 
