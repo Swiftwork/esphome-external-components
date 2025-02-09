@@ -21,21 +21,8 @@ class HousegardOrigoProtocol : public RemoteProtocol<HousegardOrigoData> {
   optional<HousegardOrigoData> decode(RemoteReceiveData src) override;
   void dump(const HousegardOrigoData &data) override;
 
- protected:
-  // Constants from reference implementation
-  static const uint16_t NARROW_PULSE = 450;
-  static const uint16_t WIDE_PULSE = 1250;
-  static const uint8_t SEQUENCE_LEN = 51;  // 32 + 19 bits
-
-  void encode_bit_(RemoteTransmitData *dst, bool value) const {
-    if (value) {
-      dst->mark(NARROW_PULSE);
-      dst->space(NARROW_PULSE);
-    } else {
-      dst->mark(WIDE_PULSE);
-      dst->space(WIDE_PULSE);
-    }
-  }
+ private:
+  void encode_bit_(RemoteTransmitData *dst, bool value) const;
 };
 
 DECLARE_REMOTE_PROTOCOL(HousegardOrigo)
