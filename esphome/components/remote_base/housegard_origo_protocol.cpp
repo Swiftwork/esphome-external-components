@@ -35,8 +35,6 @@ static const char *const TAG = "remote.housegard_origo";
 static const uint8_t SEQUENCE_LEN = 51;    // Minimum bits in sequence
 static const uint32_t BIT_ONE_US = 450;    // A narrow pulse signaling logical 1
 static const uint32_t BIT_ZERO_US = 1250;  // A wide pulse signaling logical 0
-static const uint32_t BIT_ONE_TOLERANCE_US = 80;
-static const uint32_t BIT_ZERO_TOLERANCE_US = 100;
 
 void HousegardOrigoProtocol::encode_bit(RemoteTransmitData *dst, bool value, bool mark) const {
   if (value) {
@@ -66,13 +64,31 @@ void HousegardOrigoProtocol::encode(RemoteTransmitData *dst, const HousegardOrig
 
   // Encode low bits (24 bits)
   for (uint8_t i = 0; i < 24; i++) {
-    this->encode_bit(dst, data.sequence_lowbits & (1 << i), i % 2 == 0);
+    this->encode_bit(dst, data.lowbits & (1 << i), i % 2 == 0);
   }
 
   // Encode high bits (19 bits)
   for (uint8_t i = 0; i < 19; i++) {
-    this->encode_bit(dst, data.sequence_highbits & (1 << i), i % 2 == 0);
+    this->encode_bit(dst, data.highbits & (1 << i), i % 2 == 0);
   }
+}
+
+optional<bool> HousegardOrigoProtocol::decode_bit(RemoteReceiveData &src, bool is_mark, uint8_t bit_position) const {
+  bool is_one;
+  if (is_mark) {
+    is_one = src.expect_mark(BIT_ONE_US);
+    if (!is_one && !src.expect_mark(BIT_ZERO_US)) {
+      ESP_LOGV(TAG, "Failed to decode mark at bit %d", bit_position);
+      return {};
+    }
+  } else {
+    is_one = src.expect_space(BIT_ONE_US);
+    if (!is_one && !src.expect_space(BIT_ZERO_US)) {
+      ESP_LOGV(TAG, "Failed to decode space at bit %d", bit_position);
+      return {};
+    }
+  }
+  return is_one;
 }
 
 optional<HousegardOrigoData> HousegardOrigoProtocol::decode(RemoteReceiveData src) {
@@ -87,72 +103,30 @@ optional<HousegardOrigoData> HousegardOrigoProtocol::decode(RemoteReceiveData sr
   }
 
   data.device = 0;
-  data.sequence_highbits = 0;
-  data.sequence_lowbits = 0;
+  data.lowbits = 0;
+  data.highbits = 0;
 
-  // Decode device ID (8 bits)
-  for (uint8_t i = 0; i < 8; i++) {
+  // Decode all bits in the sequence
+  for (uint8_t i = 0; i < SEQUENCE_LEN; i++) {
     bool is_mark = (i % 2 == 0);
-    bool is_one;
-    if (is_mark) {
-      is_one = src.expect_mark(BIT_ONE_US);
-      if (!is_one && !src.expect_mark(BIT_ZERO_US)) {
-        ESP_LOGV(TAG, "Failed to decode device ID mark at bit %d", i);
-        return {};
-      }
-    } else {
-      is_one = src.expect_space(BIT_ONE_US);
-      if (!is_one && !src.expect_space(BIT_ZERO_US)) {
-        ESP_LOGV(TAG, "Failed to decode device ID space at bit %d", i);
-        return {};
-      }
+    auto bit_result = decode_bit(src, is_mark, i);
+    if (!bit_result.has_value()) {
+      return {};
     }
-    if (is_one) {
+    if (!*bit_result) {
+      continue;
+    }
+
+    // Store bit in appropriate field based on position
+    if (i < 8) {
+      // Device ID bits (0-7)
       data.device |= (1 << i);
-    }
-  }
-
-  // Decode low bits (24 bits)
-  for (uint8_t i = 0; i < 24; i++) {
-    bool is_mark = (i % 2 == 0);
-    bool is_one;
-    if (is_mark) {
-      is_one = src.expect_mark(BIT_ONE_US);
-      if (!is_one && !src.expect_mark(BIT_ZERO_US)) {
-        ESP_LOGV(TAG, "Failed to decode low bits mark at bit %d", i);
-        return {};
-      }
-    } else {
-      is_one = src.expect_space(BIT_ONE_US);
-      if (!is_one && !src.expect_space(BIT_ZERO_US)) {
-        ESP_LOGV(TAG, "Failed to decode low bits space at bit %d", i);
-        return {};
-      }
-    }
-    if (is_one) {
-      data.sequence_lowbits |= (1 << i);
-    }
-  }
-
-  // Decode high bits (19 bits)
-  for (uint8_t i = 0; i < 19; i++) {
-    bool is_mark = (i % 2 == 0);
-    bool is_one;
-    if (is_mark) {
-      is_one = src.expect_mark(BIT_ONE_US);
-      if (!is_one && !src.expect_mark(BIT_ZERO_US)) {
-        ESP_LOGV(TAG, "Failed to decode high bits mark at bit %d", i);
-        return {};
-      }
-    } else {
-      is_one = src.expect_space(BIT_ONE_US);
-      if (!is_one && !src.expect_space(BIT_ZERO_US)) {
-        ESP_LOGV(TAG, "Failed to decode high bits space at bit %d", i);
-        return {};
-      }
-    }
-    if (is_one) {
-      data.sequence_highbits |= (1 << i);
+    } else if (i < 32) {
+      // Low bits (8-31)
+      data.lowbits |= (1 << (i - 8));
+    } else if (i < 51) {
+      // High bits (32-50)
+      data.highbits |= (1 << (i - 32));
     }
   }
 
@@ -161,8 +135,8 @@ optional<HousegardOrigoData> HousegardOrigoProtocol::decode(RemoteReceiveData sr
 }
 
 void HousegardOrigoProtocol::dump(const HousegardOrigoData &data) {
-  ESP_LOGD(TAG, "Received Housegard Origo: device=0x%02X, sequence_high=0x%06X, sequence_low=0x%05X", data.device,
-           data.sequence_lowbits, data.sequence_highbits);
+  ESP_LOGD(TAG, "Received Housegard Origo: device=0x%02X, low_bits=0x%06X, high_bits=0x%05X", data.device, data.lowbits,
+           data.highbits);
 }
 
 }  // namespace remote_base
