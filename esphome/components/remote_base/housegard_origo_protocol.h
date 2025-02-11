@@ -22,7 +22,7 @@ class HousegardOrigoProtocol : public RemoteProtocol<HousegardOrigoData> {
   void dump(const HousegardOrigoData &data) override;
 
  private:
-  void encode_bit_(RemoteTransmitData *dst, bool value) const;
+  void encode_bit(RemoteTransmitData *dst, bool value, bool mark) const;
 };
 
 DECLARE_REMOTE_PROTOCOL(HousegardOrigo)
