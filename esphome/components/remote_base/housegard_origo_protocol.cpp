@@ -69,19 +69,19 @@ void HousegardOrigoProtocol::encode(RemoteTransmitData *dst, const HousegardOrig
 
 optional<bool> HousegardOrigoProtocol::decode_bit(RemoteReceiveData &src, bool is_mark, uint8_t bit_position) const {
   if (is_mark) {
-    if (src.expect_mark(BIT_ONE_US)) {
+    if (src.peek_mark(BIT_ONE_US, bit_position)) {
       return true;
     }
-    if (src.expect_mark(BIT_ZERO_US)) {
+    if (src.peek_mark(BIT_ZERO_US, bit_position)) {
       return false;
     }
     ESP_LOGV(TAG, "Failed to decode mark at bit %d", bit_position);
     return {};
   } else {
-    if (src.expect_space(BIT_ONE_US)) {
+    if (src.peek_space(BIT_ONE_US, bit_position)) {
       return true;
     }
-    if (src.expect_space(BIT_ZERO_US)) {
+    if (src.peek_space(BIT_ZERO_US, bit_position)) {
       return false;
     }
     ESP_LOGV(TAG, "Failed to decode space at bit %d", bit_position);
@@ -114,13 +114,13 @@ optional<HousegardOrigoData> HousegardOrigoProtocol::decode(RemoteReceiveData sr
       continue;
     }
 
-    // Store bit in appropriate field based on position, but reverse the bit position
+    // Store bit in appropriate field based on position
     if (i < 8) {
       // Device ID bits (0-7)
-      data.device |= (1 << (7 - i));  // Changed from (1 << i)
+      data.device |= (1 << i);
     } else if (i < SEQUENCE_LEN) {
       // Pairing Key bits (8-end)
-      data.pairing_key |= (1ULL << (SEQUENCE_LEN - 1 - i));  // Changed from (1 << (i - 8))
+      data.pairing_key |= (1 << (i - 8));
     }
   }
 
