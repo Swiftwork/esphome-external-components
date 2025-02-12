@@ -118,7 +118,7 @@ optional<HousegardOrigoData> HousegardOrigoProtocol::decode(RemoteReceiveData sr
       data.device |= (1 << i);
     } else if (i < SEQUENCE_LEN) {
       // Pairing Key bits (8-end)
-      data.pairing_key |= (1 << (i - 8));
+      data.pairing_key |= (1ULL << (i - 8));
     }
   }
 
