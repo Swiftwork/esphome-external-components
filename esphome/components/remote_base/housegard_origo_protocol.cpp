@@ -104,7 +104,6 @@ optional<HousegardOrigoData> HousegardOrigoProtocol::decode(RemoteReceiveData sr
   for (uint8_t i = 0; i < SEQUENCE_LEN; i++) {
     bool is_mark = (i % 2 == 0);
     auto bit_result = decode_bit(src, is_mark, i);
-    ESP_LOGV(TAG, "Decoded bit %d: %s", i, bit_result.has_value() ? (*bit_result ? "true" : "false") : "unknown");
     if (!bit_result.has_value()) {
       return {};
     }
