@@ -114,13 +114,13 @@ optional<HousegardOrigoData> HousegardOrigoProtocol::decode(RemoteReceiveData sr
       continue;
     }
 
-    // Store bit in appropriate field based on position
+    // Store bit in appropriate field based on position, but reverse the bit position
     if (i < 8) {
       // Device ID bits (0-7)
-      data.device |= (1 << i);
+      data.device |= (1 << (7 - i));  // Changed from (1 << i)
     } else if (i < SEQUENCE_LEN) {
       // Pairing Key bits (8-end)
-      data.pairing_key |= (1 << (i - 8));
+      data.pairing_key |= (1ULL << (SEQUENCE_LEN - 1 - i));  // Changed from (1 << (i - 8))
     }
   }
 
