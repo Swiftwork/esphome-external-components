@@ -6,11 +6,10 @@ namespace esphome {
 namespace remote_base {
 
 struct HousegardOrigoData {
-  uint8_t device;     // 8-bit device ID
-  uint32_t lowbits;   // Lower 32 bits of sequence
-  uint32_t highbits;  // Upper 19 bits of sequence
+  uint8_t device;        // 8-bit device ID
+  uint64_t pairing_key;  // 45-bit pairing key
   bool operator==(const HousegardOrigoData &rhs) const {
-    return device == rhs.device && lowbits == rhs.lowbits && highbits == rhs.highbits;
+    return device == rhs.device && pairing_key == rhs.pairing_key;
   }
 };
 
@@ -30,14 +29,12 @@ DECLARE_REMOTE_PROTOCOL(HousegardOrigo)
 template<typename... Ts> class HousegardOrigoAction : public RemoteTransmitterActionBase<Ts...> {
  public:
   TEMPLATABLE_VALUE(uint8_t, device)
-  TEMPLATABLE_VALUE(uint32_t, highbits)
-  TEMPLATABLE_VALUE(uint32_t, lowbits)
+  TEMPLATABLE_VALUE(uint64_t, pairing_key)
 
   void encode(RemoteTransmitData *dst, Ts... x) override {
     HousegardOrigoData data{};
     data.device = this->device_.value(x...);
-    data.lowbits = this->lowbits_.value(x...);
-    data.highbits = this->highbits_.value(x...);
+    data.pairing_key = this->pairing_key_.value(x...);
     HousegardOrigoProtocol().encode(dst, data);
   }
 };

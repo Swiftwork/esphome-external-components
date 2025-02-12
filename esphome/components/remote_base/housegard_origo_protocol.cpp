@@ -9,32 +9,31 @@ static const char *const TAG = "remote.housegard_origo";
 /**
  * The Housegard Origo Smoke Detector sends out a signals 8 times in succession.
  * Each signal consists of 53 pulses where:
- * - A narrow pulse (450μs) represents a logical 1
- * - A wide pulse (1250μs) represents a logical 0
+ * - A narrow pulse (450μs) represents a logical 0
+ * - A wide pulse (1250μs) represents a logical 1
+ * - The signal is given in reverse order, so the least significant bit is sent first
  *
  * Signal structure:
- * - First 8 bits (in reverse order): Device ID
+ * - First 8 bits: Device ID
  *   When device is unpaired, ID is typically 0xAA (10101010)
- * - Remaining bits (in reverse order): Pairing key
- *   Split into low (24 bits) and high (19 bits) to avoid 64-bit integers
- * - The signal is padded with zeroes at the end, hence only 51 bits are required
+ * - Remaining bits: Pairing key
+ * - The signal is padded with zeroes at the end
  *
  * Protocol research and analysis by https://github.com/fredilarsen/OrigoSmokeDetector
  *
  * An example signal could be:
  *
- * 01100101 011010100110100101010110 010101010101101000000
- *    ID            Low bits               High bits
+ * 01100101 011010100110100101010110010101010101101000000
+ *    ID                     Pairing key
  *
  * In reverse order, the signal is:
- * 10100110 = 0xA6 = Device ID
- * 011010101001011001010110 = 0x6A6956 = Low bits
- * 010101010101101000000 = 0x5AAA = High bits
+ * 10100110 = 0x6A = Device ID
+ * 000000101101010101010011010101001011001010110 = 0x5AAA6A9656 = Pairing Key
  */
 
-static const uint8_t SEQUENCE_LEN = 51;    // Minimum bits in sequence
-static const uint32_t BIT_ONE_US = 450;    // A narrow pulse signaling logical 1
-static const uint32_t BIT_ZERO_US = 1250;  // A wide pulse signaling logical 0
+static const uint8_t SEQUENCE_LEN = 53;   // Minimum bits in sequence
+static const uint16_t BIT_ZERO_US = 450;  // A narrow pulse signaling logical 0
+static const uint16_t BIT_ONE_US = 1250;  // A wide pulse signaling logical 1
 
 void HousegardOrigoProtocol::encode_bit(RemoteTransmitData *dst, bool value, bool mark) const {
   if (value) {
@@ -57,19 +56,14 @@ void HousegardOrigoProtocol::encode_bit(RemoteTransmitData *dst, bool value, boo
 void HousegardOrigoProtocol::encode(RemoteTransmitData *dst, const HousegardOrigoData &data) {
   ESP_LOGD(TAG, "Encoding Housegard Origo signal...");
 
-  // Encode device ID (8 bits)
+  // Encode Device ID bits (0-7)
   for (uint8_t i = 0; i < 8; i++) {
     this->encode_bit(dst, data.device & (1 << i), i % 2 == 0);
   }
 
-  // Encode low bits (24 bits)
-  for (uint8_t i = 0; i < 24; i++) {
-    this->encode_bit(dst, data.lowbits & (1 << i), i % 2 == 0);
-  }
-
-  // Encode high bits (19 bits)
-  for (uint8_t i = 0; i < 19; i++) {
-    this->encode_bit(dst, data.highbits & (1 << i), i % 2 == 0);
+  // Encode Pairing Key bits (8-end)
+  for (uint8_t i = 0; i < SEQUENCE_LEN - 8; i++) {
+    this->encode_bit(dst, data.pairing_key & (1 << i), i % 2 == 0);
   }
 }
 
@@ -103,8 +97,7 @@ optional<HousegardOrigoData> HousegardOrigoProtocol::decode(RemoteReceiveData sr
   }
 
   data.device = 0;
-  data.lowbits = 0;
-  data.highbits = 0;
+  data.pairing_key = 0;
 
   // Decode all bits in the sequence
   for (uint8_t i = 0; i < SEQUENCE_LEN; i++) {
@@ -121,12 +114,9 @@ optional<HousegardOrigoData> HousegardOrigoProtocol::decode(RemoteReceiveData sr
     if (i < 8) {
       // Device ID bits (0-7)
       data.device |= (1 << i);
-    } else if (i < 32) {
-      // Low bits (8-31)
-      data.lowbits |= (1 << (i - 8));
-    } else if (i < 51) {
-      // High bits (32-50)
-      data.highbits |= (1 << (i - 32));
+    } else if (i < SEQUENCE_LEN) {
+      // Pairing Key bits (8-end)
+      data.pairing_key |= (1 << (i - 8));
     }
   }
 
@@ -135,8 +125,7 @@ optional<HousegardOrigoData> HousegardOrigoProtocol::decode(RemoteReceiveData sr
 }
 
 void HousegardOrigoProtocol::dump(const HousegardOrigoData &data) {
-  ESP_LOGD(TAG, "Received Housegard Origo: device=0x%02X, low_bits=0x%06X, high_bits=0x%05X", data.device, data.lowbits,
-           data.highbits);
+  ESP_LOGD(TAG, "Received Housegard Origo: device=0x%02X, pairing_key=0x%llX", data.device, data.pairing_key);
 }
 
 }  // namespace remote_base
