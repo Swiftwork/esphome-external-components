@@ -37,14 +37,14 @@ static const uint16_t BIT_ONE_US = 1250;  // A wide pulse signaling logical 1
 
 void HousegardOrigoProtocol::encode_bit(RemoteTransmitData *dst, bool value, bool mark) const {
   if (value) {
-    // Narrow pulse = 1
+    // Wide pulse = 1
     if (mark) {
       dst->mark(BIT_ONE_US);
     } else {
       dst->space(BIT_ONE_US);
     }
   } else {
-    // Wide pulse = 0
+    // Narrow pulse = 0
     if (mark) {
       dst->mark(BIT_ZERO_US);
     } else {
@@ -68,21 +68,25 @@ void HousegardOrigoProtocol::encode(RemoteTransmitData *dst, const HousegardOrig
 }
 
 optional<bool> HousegardOrigoProtocol::decode_bit(RemoteReceiveData &src, bool is_mark, uint8_t bit_position) const {
-  bool is_one;
   if (is_mark) {
-    is_one = src.expect_mark(BIT_ONE_US);
-    if (!is_one && !src.expect_mark(BIT_ZERO_US)) {
-      ESP_LOGV(TAG, "Failed to decode mark at bit %d", bit_position);
-      return {};
+    if (src.expect_mark(BIT_ONE_US)) {
+      return true;
     }
+    if (src.expect_mark(BIT_ZERO_US)) {
+      return false;
+    }
+    ESP_LOGV(TAG, "Failed to decode mark at bit %d", bit_position);
+    return {};
   } else {
-    is_one = src.expect_space(BIT_ONE_US);
-    if (!is_one && !src.expect_space(BIT_ZERO_US)) {
-      ESP_LOGV(TAG, "Failed to decode space at bit %d", bit_position);
-      return {};
+    if (src.expect_space(BIT_ONE_US)) {
+      return true;
     }
+    if (src.expect_space(BIT_ZERO_US)) {
+      return false;
+    }
+    ESP_LOGV(TAG, "Failed to decode space at bit %d", bit_position);
+    return {};
   }
-  return is_one;
 }
 
 optional<HousegardOrigoData> HousegardOrigoProtocol::decode(RemoteReceiveData src) {
