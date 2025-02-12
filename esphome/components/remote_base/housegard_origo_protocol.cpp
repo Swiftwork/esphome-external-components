@@ -90,13 +90,10 @@ optional<bool> HousegardOrigoProtocol::decode_bit(RemoteReceiveData &src, bool i
 }
 
 optional<HousegardOrigoData> HousegardOrigoProtocol::decode(RemoteReceiveData src) {
-  ESP_LOGV(TAG, "Attempting to decode Housegard Origo signal... (size=%d)", src.size());
-
   HousegardOrigoData data{};
 
   // Need at least SEQUENCE_LEN
   if (src.size() < SEQUENCE_LEN) {
-    ESP_LOGV(TAG, "Signal too short for Housegard Origo protocol (%d < %d)", src.size(), SEQUENCE_LEN);
     return {};
   }
 
@@ -107,6 +104,7 @@ optional<HousegardOrigoData> HousegardOrigoProtocol::decode(RemoteReceiveData sr
   for (uint8_t i = 0; i < SEQUENCE_LEN; i++) {
     bool is_mark = (i % 2 == 0);
     auto bit_result = decode_bit(src, is_mark, i);
+    ESP_LOGV(TAG, "Decoded bit %d: %s", i, bit_result.has_value() ? (*bit_result ? "true" : "false") : "unknown");
     if (!bit_result.has_value()) {
       return {};
     }
@@ -124,7 +122,6 @@ optional<HousegardOrigoData> HousegardOrigoProtocol::decode(RemoteReceiveData sr
     }
   }
 
-  ESP_LOGV(TAG, "Successfully decoded Housegard Origo signal!");
   return data;
 }
 
