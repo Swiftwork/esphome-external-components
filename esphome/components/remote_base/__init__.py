@@ -46,8 +46,8 @@ AUTO_LOAD = ["binary_sensor"]
 CONF_RECEIVER_ID = "receiver_id"
 CONF_TRANSMITTER_ID = "transmitter_id"
 CONF_FIRST = "first"
-CONF_SEQUENCE_HIGHBITS = "sequence_highbits"
-CONF_SEQUENCE_LOWBITS = "sequence_lowbits"
+CONF_PAIRING_KEY = "pairing_key"
+CONF_IS_PAIRING = "is_pairing"
 
 ns = remote_base_ns = cg.esphome_ns.namespace("remote_base")
 RemoteProtocol = ns.class_("RemoteProtocol")
@@ -1979,8 +1979,8 @@ async def mirage_action(var, config, args):
 HOUSEGARD_ORIGO_SCHEMA = cv.Schema(
     {
         cv.Required(CONF_DEVICE): cv.hex_uint8_t,
-        cv.Required(CONF_SEQUENCE_HIGHBITS): cv.hex_uint32_t,
-        cv.Required(CONF_SEQUENCE_LOWBITS): cv.hex_uint32_t,
+        cv.Required(CONF_PAIRING_KEY): cv.hex_uint64_t,
+        cv.Optional(CONF_IS_PAIRING, default=False): cv.boolean,
     }
 )
 
@@ -1991,8 +1991,7 @@ def housegard_origo_binary_sensor(var, config):
             cg.StructInitializer(
                 HousegardOrigoData,
                 ("device", config[CONF_DEVICE]),
-                ("sequence_highbits", config[CONF_SEQUENCE_HIGHBITS]),
-                ("sequence_lowbits", config[CONF_SEQUENCE_LOWBITS]),
+                ("pairing_key", config[CONF_PAIRING_KEY]),
             )
         )
     )
@@ -2009,7 +2008,7 @@ def housegard_origo_dumper(var, config):
 async def housegard_origo_action(var, config, args):
     template_ = await cg.templatable(config[CONF_DEVICE], args, cg.uint8)
     cg.add(var.set_device(template_))
-    template_ = await cg.templatable(config[CONF_SEQUENCE_HIGHBITS], args, cg.uint32)
-    cg.add(var.set_sequence_highbits(template_))
-    template_ = await cg.templatable(config[CONF_SEQUENCE_LOWBITS], args, cg.uint32)
-    cg.add(var.set_sequence_lowbits(template_))
+    template_ = await cg.templatable(config[CONF_PAIRING_KEY], args, cg.uint64)
+    cg.add(var.set_pairing_key(template_))
+    template_ = await cg.templatable(config[CONF_IS_PAIRING], args, cg.bool_)
+    cg.add(var.set_is_pairing(template_))

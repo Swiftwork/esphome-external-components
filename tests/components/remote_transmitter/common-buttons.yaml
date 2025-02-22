@@ -190,3 +190,10 @@ button:
         channel: 1
         button: 1
         check: 1
+  - platform: template
+    name: Housegard Origo
+    on_press:
+      remote_transmitter.transmit_housegard_origo:
+        device: 0x6A
+        pairing_key: 0x5AAA6A9656
+        is_pairing: false
