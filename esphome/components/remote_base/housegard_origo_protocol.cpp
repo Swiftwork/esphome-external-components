@@ -114,7 +114,9 @@ void HousegardOrigoProtocol::encode_pairing(RemoteTransmitData *dst, const House
 
   // Then send pairing signal by modifying pairing key and using encode
   HousegardOrigoData pairing_data = data;
+  ESP_LOGV(TAG, "Pairing key before: 0x%llX", pairing_data.pairing_key);
   pairing_data.pairing_key |= (1ULL << 43);
+  ESP_LOGV(TAG, "Pairing key after: 0x%llX", pairing_data.pairing_key);
   encode(dst, pairing_data);
 }
 
