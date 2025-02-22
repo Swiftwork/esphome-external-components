@@ -101,9 +101,9 @@ void HousegardOrigoProtocol::encode(RemoteTransmitData *dst, const HousegardOrig
 }
 
 void HousegardOrigoProtocol::encode_pairing(RemoteTransmitData *dst, const HousegardOrigoData &data) {
-  ESP_LOGD(TAG, "Encoding Housegard Origo pairing sequence...");
+  ESP_LOGD(TAG, "Encoding Housegard Origo pairing signal...");
 
-  // First send padding signal (0x666666666666)
+  // First send padding signal
   uint64_t padding = 0x666666666666;
   for (uint8_t i = 0; i < SEQUENCE_LEN; i++) {
     this->encode_bit(dst, padding & (1ULL << i), i % 2 == 0);
@@ -114,7 +114,7 @@ void HousegardOrigoProtocol::encode_pairing(RemoteTransmitData *dst, const House
 
   // Then send pairing signal by modifying pairing key and using encode
   HousegardOrigoData pairing_data = data;
-  pairing_data.pairing_key |= (1ULL << 44);  // Set bit 52-8=44 since we offset by 8 bits
+  pairing_data.pairing_key |= (1ULL << 43);
   encode(dst, pairing_data);
 }
 
