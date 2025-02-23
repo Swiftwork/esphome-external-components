@@ -142,6 +142,11 @@ on_mirage:
   then:
     - lambda: |-
         ESP_LOGD("mirage", "Mirage data: %s", format_hex(x.data).c_str());
+on_toto:
+  then:
+    - logger.log:
+        format: "on_toto: %u %u %u"
+        args: ["x.rc_code_1", "x.rc_code_2", "x.command"]
 on_housegard_origo:
   then:
     - logger.log:
