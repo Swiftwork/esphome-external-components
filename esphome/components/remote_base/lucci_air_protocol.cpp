@@ -227,19 +227,24 @@ optional<LucciAirData> LucciAirProtocol::decode(RemoteReceiveData src) {
   uint32_t expected_end_command = start_command ^ COMMAND_END_MASK;
 
   // Look for the end command sequence
-  // We need to skip past the start repetitions and gap to find the end sequence
-  // Each signal is SEQUENCE_LEN bits, plus gaps
-  // We'll search for the end command starting from a reasonable offset
+  // Search more comprehensively through the latter half of the signal
+  // to account for timing variations and gaps
   
-  size_t search_start = SEQUENCE_LEN * 5; // Skip past 5 start repetitions
+  size_t search_start = SEQUENCE_LEN * 2; // Start searching after first few signals
   size_t max_search_end = src.size() - SEQUENCE_LEN; // Don't go past the end
   
   bool found_end_command = false;
-  for (size_t offset = search_start; offset <= max_search_end; offset += SEQUENCE_LEN) {
+  ESP_LOGV(TAG, "Searching for end command 0x%X, device_id=0x%llX", expected_end_command, data.device_id);
+  
+  // Search with smaller increments to be more thorough
+  for (size_t offset = search_start; offset <= max_search_end; offset += 10) {
     auto end_result = decode_single_signal(src, offset);
     if (end_result.has_value()) {
       uint32_t end_command = end_result->first;
       uint64_t end_device_id = end_result->second;
+      
+      ESP_LOGV(TAG, "Found signal at offset %zu: command=0x%X, device_id=0x%llX", 
+               offset, end_command, end_device_id);
       
       // Check if this matches our expected end command and device ID
       if (end_command == expected_end_command && end_device_id == data.device_id) {
