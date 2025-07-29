@@ -17,17 +17,20 @@ static const char *const TAG = "remote.lucci_air";
  * - Between command pairs is 10000μs
  *
  * Signal structure:
- * - First 31 bits: Command
- * - Remaining 50 bits: Device ID
+ * - First 50 bits: Device ID
+ * - Remaining 31 bits: Command
  *
- * Examples from remote 1:
+ * Examples from a remote:
  * Direction: 011010101010101001101010101010 (0x1AAA9AAA) | Device: 10010101100110101010011010010110100101011001101010 (0x2566A9A5A566A)
  * Speed 1:   010110101010101001011010101010 (0x16AA96AA) | Device: 10010101100110101010011010010110100101011001101010 (0x2566A9A5A566A)
  * Power:     011001101010101001100110101010 (0x19AA99AA) | Device: 10010101100110101010011010010110100101011001101010 (0x2566A9A5A566A)
  * Light:     011001011010101001100101101010 (0x196A996A) | Device: 10010101100110101010011010010110100101011001101010 (0x2566A9A5A566A)
+ * 
+ * Encoded in reverse order (LSB first):
+ * Light: 010101100110101001011010010110010101011001101010010101011010011001010101101001100
  */
 
-static const uint8_t SEQUENCE_LEN = 81;    // 31 command + 50 device ID bits
+static const uint8_t SEQUENCE_LEN = 81;    // 50 device ID + 31 command bits
 static const uint16_t BIT_ZERO_US = 290;   // A narrow pulse signaling logical 0
 static const uint16_t BIT_ONE_US = 875;    // A wide pulse signaling logical 1
 static const uint16_t GAP_US = 5000;       // Gap between signals
@@ -91,14 +94,15 @@ std::string LucciAirProtocol::get_command_name(uint32_t command_value) {
 }
 
 void LucciAirProtocol::encode_signal_with_command(RemoteTransmitData *dst, uint32_t command, uint64_t device_id) {
-  // Encode Command bits (0-30) - LSB first
-  for (uint8_t i = 0; i < 31; i++) {
-    this->encode_bit(dst, command & (1UL << i), i % 2 == 0);
-  }
 
-  // Encode Device ID bits (31-80) - LSB first  
-  for (uint8_t i = 0; i < 50; i++) {
-    this->encode_bit(dst, device_id & (1ULL << i), (31 + i) % 2 == 0);
+  // Encode Device ID bits (0-49)
+  for (uint8_t i = 0; i < 49; i++) {
+    this->encode_bit(dst, device_id & (1ULL << i), i % 2 == 0);
+  }
+  
+  // Encode Command bits (50-81)
+  for (uint8_t i = 0; i < 31; i++) {
+    this->encode_bit(dst, command & (1UL << i), (50 + i) % 2 == 0);
   }
 }
 
@@ -178,12 +182,12 @@ optional<LucciAirData> LucciAirProtocol::decode(RemoteReceiveData src) {
     }
 
     // Store bit in appropriate field based on position
-    if (i < 31) {
-      // Command bits (0-30)
-      raw_command |= (1UL << i);
+    if (i < 50) {
+      // Device ID bits (0-49)
+      data.device_id |= (1ULL << i);
     } else if (i < SEQUENCE_LEN) {
-      // Device ID bits (31-80)
-      data.device_id |= (1ULL << (i - 31));
+      // Command bits (50-80)
+      raw_command |= (1UL << (i - 50));
     }
   }
 
