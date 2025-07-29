@@ -180,17 +180,19 @@ optional<std::pair<uint32_t, uint64_t>> LucciAirProtocol::decode_single_signal(R
         bit_result = true;
       } else if (src.peek_mark(BIT_ZERO_US, bit_index)) {
         bit_result = false;
+      } else {
+        // Failed to decode mark
+        return {};
       }
     } else {
       if (src.peek_space(BIT_ONE_US, bit_index)) {
         bit_result = true;
       } else if (src.peek_space(BIT_ZERO_US, bit_index)) {
         bit_result = false;
+      } else {
+        // Failed to decode space
+        return {};
       }
-    }
-    
-    if (!bit_result.has_value()) {
-      return {};
     }
     
     if (*bit_result) {
