@@ -204,3 +204,9 @@ button:
         device: 0x6A
         pairing_key: 0x5AAA6A9656
         is_pairing: false
+  - platform: template
+    name: Lucci Air
+    on_press:
+      remote_transmitter.transmit_lucci_air:
+        command: "power"
+        device_id: 0x2566A9A5A566A

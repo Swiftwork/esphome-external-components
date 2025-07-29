@@ -96,11 +96,11 @@ std::string LucciAirProtocol::get_command_name(uint32_t command_value) {
 void LucciAirProtocol::encode_signal_with_command(RemoteTransmitData *dst, uint32_t command, uint64_t device_id) {
 
   // Encode Device ID bits (0-49)
-  for (uint8_t i = 0; i < 49; i++) {
+  for (uint8_t i = 0; i < 50; i++) {
     this->encode_bit(dst, device_id & (1ULL << i), i % 2 == 0);
   }
   
-  // Encode Command bits (50-81)
+  // Encode Command bits (50-80)
   for (uint8_t i = 0; i < 31; i++) {
     this->encode_bit(dst, command & (1UL << i), (50 + i) % 2 == 0);
   }

@@ -152,3 +152,8 @@ on_housegard_origo:
     - logger.log:
         format: "on_housegard_origo: %u %lu %lu"
         args: ["x.device", "long(x.sequence_highbits)", "long(x.sequence_lowbits)"]
+on_lucci_air:
+  then:
+    - logger.log:
+        format: "on_lucci_air: %s %llu"
+        args: ["x.command.c_str()", "x.device_id"]
