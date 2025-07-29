@@ -159,47 +159,33 @@ optional<bool> LucciAirProtocol::decode_bit(RemoteReceiveData &src, bool is_mark
   }
 }
 
-optional<std::pair<uint32_t, uint64_t>> LucciAirProtocol::decode_single_signal(RemoteReceiveData &src, size_t start_index) const {
-  // Need at least SEQUENCE_LEN bits from start_index
-  if (src.size() < start_index + SEQUENCE_LEN) {
+
+
+optional<LucciAirData> LucciAirProtocol::decode(RemoteReceiveData src) {
+  LucciAirData data{};
+
+  // Need at least SEQUENCE_LEN bits for a single signal
+  if (src.size() < SEQUENCE_LEN) {
     return {};
   }
 
   uint32_t raw_command = 0;
-  uint64_t device_id = 0;
+  data.device_id = 0;
 
-  // Decode all bits in the sequence
+  // Decode the first signal sequentially
   for (uint8_t i = 0; i < SEQUENCE_LEN; i++) {
-    size_t bit_index = start_index + i;
     bool is_mark = (i % 2 == 0);
-    
-    // Use peek methods with absolute index
-    optional<bool> bit_result;
-    if (is_mark) {
-      if (src.peek_mark(BIT_ONE_US, bit_index)) {
-        bit_result = true;
-      } else if (src.peek_mark(BIT_ZERO_US, bit_index)) {
-        bit_result = false;
-      } else {
-        // Failed to decode mark
-        return {};
-      }
-    } else {
-      if (src.peek_space(BIT_ONE_US, bit_index)) {
-        bit_result = true;
-      } else if (src.peek_space(BIT_ZERO_US, bit_index)) {
-        bit_result = false;
-      } else {
-        // Failed to decode space
-        return {};
-      }
+    auto bit_result = decode_bit(src, is_mark, i);
+    if (!bit_result.has_value()) {
+      ESP_LOGV(TAG, "Failed to decode bit %d", i);
+      return {};
     }
     
     if (*bit_result) {
       // Store bit in appropriate field based on position
       if (i < 50) {
         // Device ID bits (0-49)
-        device_id |= (1ULL << i);
+        data.device_id |= (1ULL << i);
       } else if (i < SEQUENCE_LEN) {
         // Command bits (50-80)
         raw_command |= (1UL << (i - 50));
@@ -207,49 +193,48 @@ optional<std::pair<uint32_t, uint64_t>> LucciAirProtocol::decode_single_signal(R
     }
   }
 
-  return std::make_pair(raw_command, device_id);
-}
-
-optional<LucciAirData> LucciAirProtocol::decode(RemoteReceiveData src) {
-  LucciAirData data{};
-
-  // Decode first signal (start command)
-  auto start_result = decode_single_signal(src, 0);
-  if (!start_result.has_value()) {
-    ESP_LOGV(TAG, "Failed to decode start command");
-    return {};
-  }
-
-  uint32_t start_command = start_result->first;
-  data.device_id = start_result->second;
-
   // Calculate expected end command
-  uint32_t expected_end_command = start_command ^ COMMAND_END_MASK;
+  uint32_t expected_end_command = raw_command ^ COMMAND_END_MASK;
+  
+  ESP_LOGV(TAG, "Decoded start command: 0x%X, device_id=0x%llX", raw_command, data.device_id);
+  ESP_LOGV(TAG, "Looking for end command: 0x%X", expected_end_command);
 
-  // Look for the end command sequence
-  // Search more comprehensively through the latter half of the signal
-  // to account for timing variations and gaps
-  
-  size_t search_start = SEQUENCE_LEN * 2; // Start searching after first few signals
-  size_t max_search_end = src.size() - SEQUENCE_LEN; // Don't go past the end
-  
+  // Search through the rest of the signal for the end command
+  // We'll try to decode signals at various positions
   bool found_end_command = false;
-  ESP_LOGV(TAG, "Searching for end command 0x%X, device_id=0x%llX", expected_end_command, data.device_id);
   
-  // Search with smaller increments to be more thorough
-  for (size_t offset = search_start; offset <= max_search_end; offset += 10) {
-    auto end_result = decode_single_signal(src, offset);
-    if (end_result.has_value()) {
-      uint32_t end_command = end_result->first;
-      uint64_t end_device_id = end_result->second;
+  // Skip ahead and try to find the end command
+  // The protocol has 5 start repetitions + gap + 5 end repetitions
+  for (size_t start_pos = SEQUENCE_LEN; start_pos < src.size() - SEQUENCE_LEN; start_pos += 10) {
+    uint32_t test_command = 0;
+    uint64_t test_device_id = 0;
+    bool decode_success = true;
+    
+    // Try to decode a signal starting at this position
+    for (uint8_t i = 0; i < SEQUENCE_LEN && decode_success; i++) {
+      bool is_mark = (i % 2 == 0);
+      auto bit_result = decode_bit(src, is_mark, start_pos + i);
+      if (!bit_result.has_value()) {
+        decode_success = false;
+        break;
+      }
       
-      ESP_LOGV(TAG, "Found signal at offset %zu: command=0x%X, device_id=0x%llX", 
-               offset, end_command, end_device_id);
+      if (*bit_result) {
+        if (i < 50) {
+          test_device_id |= (1ULL << i);
+        } else if (i < SEQUENCE_LEN) {
+          test_command |= (1UL << (i - 50));
+        }
+      }
+    }
+    
+    if (decode_success) {
+      ESP_LOGV(TAG, "Found signal at pos %zu: command=0x%X, device_id=0x%llX", 
+               start_pos, test_command, test_device_id);
       
-      // Check if this matches our expected end command and device ID
-      if (end_command == expected_end_command && end_device_id == data.device_id) {
+      if (test_command == expected_end_command && test_device_id == data.device_id) {
         found_end_command = true;
-        ESP_LOGV(TAG, "Found matching end command at offset %zu", offset);
+        ESP_LOGV(TAG, "Found matching end command at position %zu", start_pos);
         break;
       }
     }
@@ -257,15 +242,15 @@ optional<LucciAirData> LucciAirProtocol::decode(RemoteReceiveData src) {
 
   if (!found_end_command) {
     ESP_LOGV(TAG, "Failed to find matching end command for start=0x%X, expected_end=0x%X", 
-             start_command, expected_end_command);
+             raw_command, expected_end_command);
     return {};
   }
 
   // Convert start command to command name
-  data.command = get_command_name(start_command);
+  data.command = get_command_name(raw_command);
   
   if (data.command == "unknown") {
-    ESP_LOGV(TAG, "Unknown command: 0x%X", start_command);
+    ESP_LOGV(TAG, "Unknown command: 0x%X", raw_command);
     return {};
   }
 
