@@ -159,12 +159,10 @@ optional<bool> LucciAirProtocol::decode_bit(RemoteReceiveData &src, bool is_mark
   }
 }
 
-
-
 optional<LucciAirData> LucciAirProtocol::decode(RemoteReceiveData src) {
   LucciAirData data{};
 
-  // Need at least SEQUENCE_LEN bits for a single signal
+  // Need at least SEQUENCE_LEN
   if (src.size() < SEQUENCE_LEN) {
     return {};
   }
@@ -172,89 +170,30 @@ optional<LucciAirData> LucciAirProtocol::decode(RemoteReceiveData src) {
   uint32_t raw_command = 0;
   data.device_id = 0;
 
-  // Decode the first signal sequentially
+  // Decode all bits in the sequence
   for (uint8_t i = 0; i < SEQUENCE_LEN; i++) {
     bool is_mark = (i % 2 == 0);
     auto bit_result = decode_bit(src, is_mark, i);
     if (!bit_result.has_value()) {
-      ESP_LOGV(TAG, "Failed to decode bit %d", i);
       return {};
     }
-    
-    if (*bit_result) {
-      // Store bit in appropriate field based on position
-      if (i < 50) {
-        // Device ID bits (0-49)
-        data.device_id |= (1ULL << i);
-      } else if (i < SEQUENCE_LEN) {
-        // Command bits (50-80)
-        raw_command |= (1UL << (i - 50));
-      }
+    if (!*bit_result) {
+      continue;
+    }
+
+    // Store bit in appropriate field based on position
+    if (i < 50) {
+      // Device ID bits (0-49)
+      data.device_id |= (1ULL << i);
+    } else if (i < SEQUENCE_LEN) {
+      // Command bits (50-80)
+      raw_command |= (1UL << (i - 50));
     }
   }
 
-  // Calculate expected end command
-  uint32_t expected_end_command = raw_command ^ COMMAND_END_MASK;
-  
-  ESP_LOGV(TAG, "Decoded start command: 0x%X, device_id=0x%llX", raw_command, data.device_id);
-  ESP_LOGV(TAG, "Looking for end command: 0x%X", expected_end_command);
-
-  // Search through the rest of the signal for the end command
-  // We'll try to decode signals at various positions
-  bool found_end_command = false;
-  
-  // Skip ahead and try to find the end command
-  // The protocol has 5 start repetitions + gap + 5 end repetitions
-  for (size_t start_pos = SEQUENCE_LEN; start_pos < src.size() - SEQUENCE_LEN; start_pos += 10) {
-    uint32_t test_command = 0;
-    uint64_t test_device_id = 0;
-    bool decode_success = true;
-    
-    // Try to decode a signal starting at this position
-    for (uint8_t i = 0; i < SEQUENCE_LEN && decode_success; i++) {
-      bool is_mark = (i % 2 == 0);
-      auto bit_result = decode_bit(src, is_mark, start_pos + i);
-      if (!bit_result.has_value()) {
-        decode_success = false;
-        break;
-      }
-      
-      if (*bit_result) {
-        if (i < 50) {
-          test_device_id |= (1ULL << i);
-        } else if (i < SEQUENCE_LEN) {
-          test_command |= (1UL << (i - 50));
-        }
-      }
-    }
-    
-    if (decode_success) {
-      ESP_LOGV(TAG, "Found signal at pos %zu: command=0x%X, device_id=0x%llX", 
-               start_pos, test_command, test_device_id);
-      
-      if (test_command == expected_end_command && test_device_id == data.device_id) {
-        found_end_command = true;
-        ESP_LOGV(TAG, "Found matching end command at position %zu", start_pos);
-        break;
-      }
-    }
-  }
-
-  if (!found_end_command) {
-    ESP_LOGV(TAG, "Failed to find matching end command for start=0x%X, expected_end=0x%X", 
-             raw_command, expected_end_command);
-    return {};
-  }
-
-  // Convert start command to command name
+  // Convert raw command to command name
   data.command = get_command_name(raw_command);
-  
-  if (data.command == "unknown") {
-    ESP_LOGV(TAG, "Unknown command: 0x%X", raw_command);
-    return {};
-  }
 
-  ESP_LOGD(TAG, "Successfully decoded Lucci Air command pair: %s", data.command.c_str());
   return data;
 }
 
