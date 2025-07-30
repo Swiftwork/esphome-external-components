@@ -1,6 +1,6 @@
 #include "esp32_dac.h"
-#include "esphome/core/log.h"
 #include "esphome/core/helpers.h"
+#include "esphome/core/log.h"
 
 #ifdef USE_ESP32
 
@@ -20,7 +20,6 @@ static constexpr uint8_t DAC0_PIN = 25;
 static const char *const TAG = "esp32_dac";
 
 void ESP32DAC::setup() {
-  ESP_LOGCONFIG(TAG, "Setting up ESP32 DAC Output...");
   this->pin_->setup();
   this->turn_off();
 

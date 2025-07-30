@@ -1,8 +1,8 @@
 #ifdef USE_ARDUINO
 
 #include "tm1651.h"
-#include "esphome/core/log.h"
 #include "esphome/core/helpers.h"
+#include "esphome/core/log.h"
 
 namespace esphome {
 namespace tm1651 {
@@ -17,8 +17,6 @@ static const uint8_t TM1651_BRIGHTNESS_MEDIUM_HW = 2;
 static const uint8_t TM1651_BRIGHTNESS_HIGH_HW = 7;
 
 void TM1651Display::setup() {
-  ESP_LOGCONFIG(TAG, "Setting up TM1651...");
-
   uint8_t clk = clk_pin_->get_pin();
   uint8_t dio = dio_pin_->get_pin();
 
