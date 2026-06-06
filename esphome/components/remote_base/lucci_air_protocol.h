@@ -30,7 +30,7 @@ class LucciAirProtocol : public RemoteProtocol<LucciAirData> {
   optional<bool> decode_bit(RemoteReceiveData &src, bool is_mark, uint8_t bit_position) const;
   
   static const std::map<std::string, uint32_t> COMMANDS;
-  static const uint32_t COMMAND_END_MASK = 0x00030003;
+  static constexpr uint32_t COMMAND_END_MASK = 0x00030003;
 };
 
 DECLARE_REMOTE_PROTOCOL(LucciAir)
@@ -40,7 +40,7 @@ template<typename... Ts> class LucciAirAction : public RemoteTransmitterActionBa
   TEMPLATABLE_VALUE(std::string, command)
   TEMPLATABLE_VALUE(uint64_t, device_id)
 
-  void encode(RemoteTransmitData *dst, const Ts &...x) override {
+  void encode(RemoteTransmitData *dst, Ts... x) override {
     LucciAirData data{};
     data.command = this->command_.value(x...);
     data.device_id = this->device_id_.value(x...);

@@ -1,5 +1,6 @@
 #include "lucci_air_protocol.h"
 #include "esphome/core/log.h"
+#include <cinttypes>
 
 namespace esphome::remote_base {
 
@@ -29,11 +30,11 @@ static const char *const TAG = "remote.lucci_air";
  * Light: 010101100110101001011010010110010101011001101010010101011010011001010101101001100
  */
 
-static const uint8_t SEQUENCE_LEN = 81;    // 50 device ID + 31 command bits
-static const uint16_t BIT_ZERO_US = 290;   // A narrow pulse signaling logical 0
-static const uint16_t BIT_ONE_US = 875;    // A wide pulse signaling logical 1
-static const uint16_t GAP_US = 5000;       // Gap between signals
-static const uint16_t COMMAND_GAP_US = 10000; // Gap between command pairs
+static constexpr uint8_t SEQUENCE_LEN = 81;
+static constexpr uint16_t BIT_ZERO_US = 290;
+static constexpr uint16_t BIT_ONE_US = 875;
+static constexpr uint16_t GAP_US = 5000;
+static constexpr uint16_t COMMAND_GAP_US = 10000;
 
 const std::map<std::string, uint32_t> LucciAirProtocol::COMMANDS = {
     {"direction", 0x1AAA9AAA},
@@ -197,7 +198,7 @@ optional<LucciAirData> LucciAirProtocol::decode(RemoteReceiveData src) {
 }
 
 void LucciAirProtocol::dump(const LucciAirData &data) {
-  ESP_LOGD(TAG, "Received Lucci Air: command=%s, device_id=0x%llX", data.command.c_str(), data.device_id);
+  ESP_LOGI(TAG, "Received Lucci Air: command=%s, device_id=0x%" PRIx64, data.command.c_str(), data.device_id);
 }
 
 }  // namespace esphome::remote_base

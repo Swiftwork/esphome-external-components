@@ -32,7 +32,7 @@ template<typename... Ts> class HousegardOrigoAction : public RemoteTransmitterAc
   TEMPLATABLE_VALUE(uint64_t, pairing_key)
   TEMPLATABLE_VALUE(bool, is_pairing)
 
-  void encode(RemoteTransmitData *dst, const Ts &...x) override {
+  void encode(RemoteTransmitData *dst, Ts... x) override {
     HousegardOrigoData data{};
     data.device = this->device_.value(x...);
     data.pairing_key = this->pairing_key_.value(x...);

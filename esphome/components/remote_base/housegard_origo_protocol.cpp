@@ -1,5 +1,6 @@
 #include "housegard_origo_protocol.h"
 #include "esphome/core/log.h"
+#include <cinttypes>
 
 namespace esphome::remote_base {
 
@@ -62,10 +63,10 @@ static const char *const TAG = "remote.housegard_origo";
  * 010000101101010101010011010101001011001010110 = 0x85AAA6A9656 = Pairing Key
  */
 
-static const uint8_t SEQUENCE_LEN = 53;   // Minimum bits in sequence
-static const uint16_t BIT_ZERO_US = 450;  // A narrow pulse signaling logical 0
-static const uint16_t BIT_ONE_US = 1250;  // A wide pulse signaling logical 1
-static const uint16_t GAP_US = 11550;     // Gap between signals
+static constexpr uint8_t SEQUENCE_LEN = 53;
+static constexpr uint16_t BIT_ZERO_US = 450;
+static constexpr uint16_t BIT_ONE_US = 1250;
+static constexpr uint16_t GAP_US = 11550;
 
 void HousegardOrigoProtocol::encode_bit(RemoteTransmitData *dst, bool value, bool mark) const {
   if (value) {
@@ -175,7 +176,7 @@ optional<HousegardOrigoData> HousegardOrigoProtocol::decode(RemoteReceiveData sr
 }
 
 void HousegardOrigoProtocol::dump(const HousegardOrigoData &data) {
-  ESP_LOGD(TAG, "Received Housegard Origo: device=0x%02X, pairing_key=0x%llX", data.device, data.pairing_key);
+  ESP_LOGI(TAG, "Received Housegard Origo: device=0x%02X, pairing_key=0x%" PRIx64, data.device, data.pairing_key);
 }
 
 }  // namespace esphome::remote_base
