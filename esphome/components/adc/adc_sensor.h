@@ -13,12 +13,16 @@
 #include "hal/adc_types.h"  // This defines ADC_CHANNEL_MAX
 #endif                      // USE_ESP32
 
-namespace esphome {
-namespace adc {
+#ifdef USE_ZEPHYR
+#include <zephyr/drivers/adc.h>
+#endif
+
+namespace esphome::adc {
 
 #ifdef USE_ESP32
 // clang-format off
-#if (ESP_IDF_VERSION_MAJOR == 5 && \
+#if ESP_IDF_VERSION_MAJOR >= 6 || \
+    (ESP_IDF_VERSION_MAJOR == 5 && \
      ((ESP_IDF_VERSION_MINOR == 0 && ESP_IDF_VERSION_PATCH >= 5) || \
       (ESP_IDF_VERSION_MINOR == 1 && ESP_IDF_VERSION_PATCH >= 3) || \
       (ESP_IDF_VERSION_MINOR >= 2)) \
@@ -38,15 +42,15 @@ enum class SamplingMode : uint8_t {
 
 const LogString *sampling_mode_to_str(SamplingMode mode);
 
-class Aggregator {
+template<typename T> class Aggregator {
  public:
   Aggregator(SamplingMode mode);
-  void add_sample(uint32_t value);
-  uint32_t aggregate();
+  void add_sample(T value);
+  T aggregate();
 
  protected:
-  uint32_t aggr_{0};
-  uint32_t samples_{0};
+  T aggr_{0};
+  uint8_t samples_{0};
   SamplingMode mode_{SamplingMode::AVG};
 };
 
@@ -64,11 +68,11 @@ class ADCSensor : public sensor::Sensor, public PollingComponent, public voltage
   /// This method is called during the ESPHome setup process to log the configuration.
   void dump_config() override;
 
-  /// Return the setup priority for this component.
-  /// Components with higher priority are initialized earlier during setup.
-  /// @return A float representing the setup priority.
-  float get_setup_priority() const override;
-
+#ifdef USE_ZEPHYR
+  /// Set the ADC channel to be used by the ADC sensor.
+  /// @param channel Pointer to an adc_dt_spec structure representing the ADC channel.
+  void set_adc_channel(const adc_dt_spec *channel) { this->channel_ = channel; }
+#endif
   /// Set the GPIO pin to be used by the ADC sensor.
   /// @param pin Pointer to an InternalGPIOPin representing the ADC input pin.
   void set_pin(InternalGPIOPin *pin) { this->pin_ = pin; }
@@ -151,7 +155,10 @@ class ADCSensor : public sensor::Sensor, public PollingComponent, public voltage
 #ifdef USE_RP2040
   bool is_temperature_{false};
 #endif  // USE_RP2040
+
+#ifdef USE_ZEPHYR
+  const struct adc_dt_spec *channel_ = nullptr;
+#endif
 };
 
-}  // namespace adc
-}  // namespace esphome
+}  // namespace esphome::adc

@@ -1,8 +1,7 @@
 #include "lucci_air_protocol.h"
 #include "esphome/core/log.h"
 
-namespace esphome {
-namespace remote_base {
+namespace esphome::remote_base {
 
 static const char *const TAG = "remote.lucci_air";
 
@@ -201,5 +200,4 @@ void LucciAirProtocol::dump(const LucciAirData &data) {
   ESP_LOGD(TAG, "Received Lucci Air: command=%s, device_id=0x%llX", data.command.c_str(), data.device_id);
 }
 
-}  // namespace remote_base
-}  // namespace esphome 
+}  // namespace esphome::remote_base

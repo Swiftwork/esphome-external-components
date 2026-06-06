@@ -125,8 +125,7 @@ writezero:
 
 def time_to_cycles(time_us):
     cycles_per_us = 57.5
-    cycles = round(float(time_us) * cycles_per_us)
-    return cycles
+    return round(float(time_us) * cycles_per_us)
 
 
 CONF_PIO = "pio"
@@ -149,7 +148,6 @@ CHIPSETS = {
     "WS2812B": Chipset.CHIPSET_WS2812B,
     "SK6812": Chipset.CHIPSET_SK6812,
     "SM16703": Chipset.CHIPSET_SM16703,
-    "CUSTOM": Chipset.CHIPSET_CUSTOM,
 }
 
 

@@ -1,8 +1,7 @@
 #include "housegard_origo_protocol.h"
 #include "esphome/core/log.h"
 
-namespace esphome {
-namespace remote_base {
+namespace esphome::remote_base {
 
 static const char *const TAG = "remote.housegard_origo";
 
@@ -179,5 +178,4 @@ void HousegardOrigoProtocol::dump(const HousegardOrigoData &data) {
   ESP_LOGD(TAG, "Received Housegard Origo: device=0x%02X, pairing_key=0x%llX", data.device, data.pairing_key);
 }
 
-}  // namespace remote_base
-}  // namespace esphome
+}  // namespace esphome::remote_base

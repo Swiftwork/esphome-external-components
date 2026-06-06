@@ -4,8 +4,7 @@
 #include <string>
 #include <map>
 
-namespace esphome {
-namespace remote_base {
+namespace esphome::remote_base {
 
 struct LucciAirData {
   std::string command; // Command name
@@ -41,7 +40,7 @@ template<typename... Ts> class LucciAirAction : public RemoteTransmitterActionBa
   TEMPLATABLE_VALUE(std::string, command)
   TEMPLATABLE_VALUE(uint64_t, device_id)
 
-  void encode(RemoteTransmitData *dst, Ts... x) override {
+  void encode(RemoteTransmitData *dst, const Ts &...x) override {
     LucciAirData data{};
     data.command = this->command_.value(x...);
     data.device_id = this->device_id_.value(x...);
@@ -49,5 +48,4 @@ template<typename... Ts> class LucciAirAction : public RemoteTransmitterActionBa
   }
 };
 
-}  // namespace remote_base
-}  // namespace esphome 
+}  // namespace esphome::remote_base
