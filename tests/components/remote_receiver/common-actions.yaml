@@ -175,8 +175,8 @@ on_toto:
 on_housegard_origo:
   then:
     - logger.log:
-        format: "on_housegard_origo: %u %lu %lu"
-        args: ["x.device", "long(x.sequence_highbits)", "long(x.sequence_lowbits)"]
+        format: "on_housegard_origo: %u %llu"
+        args: ["x.device", "x.pairing_key"]
 on_lucci_air:
   then:
     - logger.log:

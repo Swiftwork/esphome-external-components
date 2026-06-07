@@ -2260,6 +2260,7 @@ HOUSEGARD_ORIGO_SCHEMA = cv.Schema(
     }
 )
 
+
 @register_binary_sensor("housegard_origo", HousegardOrigoBinarySensor, HOUSEGARD_ORIGO_SCHEMA)
 def housegard_origo_binary_sensor(var, config):
     cg.add(
@@ -2272,13 +2273,16 @@ def housegard_origo_binary_sensor(var, config):
         )
     )
 
+
 @register_trigger("housegard_origo", HousegardOrigoTrigger, HousegardOrigoData)
 def housegard_origo_trigger(var, config):
     pass
 
+
 @register_dumper("housegard_origo", HousegardOrigoDumper)
 def housegard_origo_dumper(var, config):
     pass
+
 
 @register_action("housegard_origo", HousegardOrigoAction, HOUSEGARD_ORIGO_SCHEMA)
 async def housegard_origo_action(var, config, args):
@@ -2323,6 +2327,7 @@ LUCCI_AIR_SCHEMA = cv.Schema(
     }
 )
 
+
 @register_binary_sensor("lucci_air", LucciAirBinarySensor, LUCCI_AIR_SCHEMA)
 def lucci_air_binary_sensor(var, config):
     cg.add(
@@ -2335,13 +2340,16 @@ def lucci_air_binary_sensor(var, config):
         )
     )
 
+
 @register_trigger("lucci_air", LucciAirTrigger, LucciAirData)
 def lucci_air_trigger(var, config):
     pass
 
+
 @register_dumper("lucci_air", LucciAirDumper)
 def lucci_air_dumper(var, config):
     pass
+
 
 @register_action("lucci_air", LucciAirAction, LUCCI_AIR_SCHEMA)
 async def lucci_air_action(var, config, args):

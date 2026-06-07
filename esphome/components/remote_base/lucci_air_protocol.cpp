@@ -1,5 +1,6 @@
 #include "lucci_air_protocol.h"
 #include "esphome/core/log.h"
+#include <array>
 #include <cinttypes>
 
 namespace esphome::remote_base {
@@ -36,7 +37,13 @@ static constexpr uint16_t BIT_ONE_US = 875;
 static constexpr uint16_t GAP_US = 5000;
 static constexpr uint16_t COMMAND_GAP_US = 10000;
 
-const std::map<std::string, uint32_t> LucciAirProtocol::COMMANDS = {
+struct LucciAirCommand {
+  const char *name;
+  uint32_t value;
+};
+
+// Small fixed dataset: a simple array with linear search avoids std::map's tree overhead
+static const std::array<LucciAirCommand, 14> COMMANDS = {{
     {"direction", 0x1AAA9AAA},
     {"speed_1", 0x16AA96AA},
     {"speed_2", 0x29AAA9AA},
@@ -51,7 +58,7 @@ const std::map<std::string, uint32_t> LucciAirProtocol::COMMANDS = {
     {"light", 0x196A996A},
     {"speed_cycle", 0x1A9A9A9A},
     {"away", 0x2A9AAA9A},
-};
+}};
 
 void LucciAirProtocol::encode_bit_(RemoteTransmitData *dst, bool value, bool mark) const {
   if (value) {
@@ -72,9 +79,10 @@ void LucciAirProtocol::encode_bit_(RemoteTransmitData *dst, bool value, bool mar
 }
 
 uint32_t LucciAirProtocol::get_command_start(const std::string &command) {
-  auto it = COMMANDS.find(command);
-  if (it != COMMANDS.end()) {
-    return it->second;
+  for (const auto &cmd : COMMANDS) {
+    if (command == cmd.name) {
+      return cmd.value;
+    }
   }
   return 0; // Unknown command
 }
@@ -85,9 +93,9 @@ uint32_t LucciAirProtocol::get_command_end(const std::string &command) {
 }
 
 std::string LucciAirProtocol::get_command_name(uint32_t command_value) {
-  for (const auto &pair : COMMANDS) {
-    if (pair.second == command_value || (pair.second ^ COMMAND_END_MASK) == command_value) {
-      return pair.first;
+  for (const auto &cmd : COMMANDS) {
+    if (cmd.value == command_value || (cmd.value ^ COMMAND_END_MASK) == command_value) {
+      return cmd.name;
     }
   }
   return "unknown";

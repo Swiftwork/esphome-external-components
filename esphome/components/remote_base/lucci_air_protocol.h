@@ -2,7 +2,6 @@
 
 #include "remote_base.h"
 #include <string>
-#include <map>
 
 namespace esphome::remote_base {
 
@@ -24,12 +23,11 @@ class LucciAirProtocol : public RemoteProtocol<LucciAirData> {
   static uint32_t get_command_end(const std::string &command);
   static std::string get_command_name(uint32_t command_value);
 
- private:
+ protected:
   void encode_bit_(RemoteTransmitData *dst, bool value, bool mark) const;
   void encode_signal_with_command_(RemoteTransmitData *dst, uint32_t command, uint64_t device_id);
   optional<bool> decode_bit_(RemoteReceiveData &src, bool is_mark, uint8_t bit_position) const;
 
-  static const std::map<std::string, uint32_t> COMMANDS;
   static constexpr uint32_t COMMAND_END_MASK = 0x00030003;
 };
 
