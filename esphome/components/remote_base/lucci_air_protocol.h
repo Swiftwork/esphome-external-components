@@ -25,10 +25,10 @@ class LucciAirProtocol : public RemoteProtocol<LucciAirData> {
   static std::string get_command_name(uint32_t command_value);
 
  private:
-  void encode_bit(RemoteTransmitData *dst, bool value, bool mark) const;
-  void encode_signal_with_command(RemoteTransmitData *dst, uint32_t command, uint64_t device_id);
-  optional<bool> decode_bit(RemoteReceiveData &src, bool is_mark, uint8_t bit_position) const;
-  
+  void encode_bit_(RemoteTransmitData *dst, bool value, bool mark) const;
+  void encode_signal_with_command_(RemoteTransmitData *dst, uint32_t command, uint64_t device_id);
+  optional<bool> decode_bit_(RemoteReceiveData &src, bool is_mark, uint8_t bit_position) const;
+
   static const std::map<std::string, uint32_t> COMMANDS;
   static constexpr uint32_t COMMAND_END_MASK = 0x00030003;
 };

@@ -68,7 +68,7 @@ static constexpr uint16_t BIT_ZERO_US = 450;
 static constexpr uint16_t BIT_ONE_US = 1250;
 static constexpr uint16_t GAP_US = 11550;
 
-void HousegardOrigoProtocol::encode_bit(RemoteTransmitData *dst, bool value, bool mark) const {
+void HousegardOrigoProtocol::encode_bit_(RemoteTransmitData *dst, bool value, bool mark) const {
   if (value) {
     // Wide pulse = 1
     if (mark) {
@@ -91,12 +91,12 @@ void HousegardOrigoProtocol::encode(RemoteTransmitData *dst, const HousegardOrig
 
   // Encode Device ID bits (0-7)
   for (uint8_t i = 0; i < 8; i++) {
-    this->encode_bit(dst, data.device & (1 << i), i % 2 == 0);
+    this->encode_bit_(dst, data.device & (1 << i), i % 2 == 0);
   }
 
   // Encode Pairing Key bits (8-end)
   for (uint8_t i = 0; i < SEQUENCE_LEN - 8; i++) {
-    this->encode_bit(dst, data.pairing_key & (1ULL << i), i % 2 == 0);
+    this->encode_bit_(dst, data.pairing_key & (1ULL << i), i % 2 == 0);
   }
 }
 
@@ -106,7 +106,7 @@ void HousegardOrigoProtocol::encode_pairing(RemoteTransmitData *dst, const House
   // First send padding signal
   uint64_t padding = 0x666666666666;
   for (uint8_t i = 0; i < SEQUENCE_LEN; i++) {
-    this->encode_bit(dst, padding & (1ULL << i), i % 2 == 0);
+    this->encode_bit_(dst, padding & (1ULL << i), i % 2 == 0);
   }
 
   // Small delay between signals
@@ -118,7 +118,7 @@ void HousegardOrigoProtocol::encode_pairing(RemoteTransmitData *dst, const House
   encode(dst, pairing_data);
 }
 
-optional<bool> HousegardOrigoProtocol::decode_bit(RemoteReceiveData &src, bool is_mark, uint8_t bit_position) const {
+optional<bool> HousegardOrigoProtocol::decode_bit_(RemoteReceiveData &src, bool is_mark, uint8_t bit_position) const {
   if (is_mark) {
     if (src.peek_mark(BIT_ONE_US, bit_position)) {
       return true;
@@ -154,7 +154,7 @@ optional<HousegardOrigoData> HousegardOrigoProtocol::decode(RemoteReceiveData sr
   // Decode all bits in the sequence
   for (uint8_t i = 0; i < SEQUENCE_LEN; i++) {
     bool is_mark = (i % 2 == 0);
-    auto bit_result = decode_bit(src, is_mark, i);
+    auto bit_result = decode_bit_(src, is_mark, i);
     if (!bit_result.has_value()) {
       return {};
     }

@@ -20,8 +20,8 @@ class HousegardOrigoProtocol : public RemoteProtocol<HousegardOrigoData> {
   void dump(const HousegardOrigoData &data) override;
 
  private:
-  void encode_bit(RemoteTransmitData *dst, bool value, bool mark) const;
-  optional<bool> decode_bit(RemoteReceiveData &src, bool is_mark, uint8_t bit_position) const;
+  void encode_bit_(RemoteTransmitData *dst, bool value, bool mark) const;
+  optional<bool> decode_bit_(RemoteReceiveData &src, bool is_mark, uint8_t bit_position) const;
 };
 
 DECLARE_REMOTE_PROTOCOL(HousegardOrigo)

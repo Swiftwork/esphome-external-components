@@ -14,6 +14,7 @@ from esphome.const import (
     CONF_DATA,
     CONF_DELTA,
     CONF_DEVICE,
+    CONF_DEVICE_ID,
     CONF_FAMILY,
     CONF_GROUP,
     CONF_ID,
@@ -2297,8 +2298,6 @@ async def housegard_origo_action(var, config, args):
     LucciAirAction,
     LucciAirDumper,
 ) = declare_protocol("LucciAir")
-
-CONF_DEVICE_ID = "device_id"
 
 LUCCI_AIR_COMMANDS = [
     "direction",

@@ -25,7 +25,7 @@ static const char *const TAG = "remote.lucci_air";
  * Speed 1:   010110101010101001011010101010 (0x16AA96AA) | Device: 10010101100110101010011010010110100101011001101010 (0x2566A9A5A566A)
  * Power:     011001101010101001100110101010 (0x19AA99AA) | Device: 10010101100110101010011010010110100101011001101010 (0x2566A9A5A566A)
  * Light:     011001011010101001100101101010 (0x196A996A) | Device: 10010101100110101010011010010110100101011001101010 (0x2566A9A5A566A)
- * 
+ *
  * Encoded in reverse order (LSB first):
  * Light: 010101100110101001011010010110010101011001101010010101011010011001010101101001100
  */
@@ -53,7 +53,7 @@ const std::map<std::string, uint32_t> LucciAirProtocol::COMMANDS = {
     {"away", 0x2A9AAA9A},
 };
 
-void LucciAirProtocol::encode_bit(RemoteTransmitData *dst, bool value, bool mark) const {
+void LucciAirProtocol::encode_bit_(RemoteTransmitData *dst, bool value, bool mark) const {
   if (value) {
     // Wide pulse = 1
     if (mark) {
@@ -93,16 +93,16 @@ std::string LucciAirProtocol::get_command_name(uint32_t command_value) {
   return "unknown";
 }
 
-void LucciAirProtocol::encode_signal_with_command(RemoteTransmitData *dst, uint32_t command, uint64_t device_id) {
+void LucciAirProtocol::encode_signal_with_command_(RemoteTransmitData *dst, uint32_t command, uint64_t device_id) {
 
   // Encode Device ID bits (0-49)
   for (uint8_t i = 0; i < 50; i++) {
-    this->encode_bit(dst, device_id & (1ULL << i), i % 2 == 0);
+    this->encode_bit_(dst, device_id & (1ULL << i), i % 2 == 0);
   }
-  
+
   // Encode Command bits (50-80)
   for (uint8_t i = 0; i < 31; i++) {
-    this->encode_bit(dst, command & (1UL << i), (50 + i) % 2 == 0);
+    this->encode_bit_(dst, command & (1UL << i), (50 + i) % 2 == 0);
   }
 }
 
@@ -111,7 +111,7 @@ void LucciAirProtocol::encode(RemoteTransmitData *dst, const LucciAirData &data)
 
   uint32_t command_start = get_command_start(data.command);
   uint32_t command_end = get_command_end(data.command);
-  
+
   if (command_start == 0) {
     ESP_LOGE(TAG, "Unknown command: %s", data.command.c_str());
     return;
@@ -122,7 +122,7 @@ void LucciAirProtocol::encode(RemoteTransmitData *dst, const LucciAirData &data)
     if (rep > 0) {
       dst->space(GAP_US);
     }
-    this->encode_signal_with_command(dst, command_start, data.device_id);
+    this->encode_signal_with_command_(dst, command_start, data.device_id);
   }
 
   // Gap between command pairs
@@ -133,11 +133,11 @@ void LucciAirProtocol::encode(RemoteTransmitData *dst, const LucciAirData &data)
     if (rep > 0) {
       dst->space(GAP_US);
     }
-    this->encode_signal_with_command(dst, command_end, data.device_id);
+    this->encode_signal_with_command_(dst, command_end, data.device_id);
   }
 }
 
-optional<bool> LucciAirProtocol::decode_bit(RemoteReceiveData &src, bool is_mark, uint8_t bit_position) const {
+optional<bool> LucciAirProtocol::decode_bit_(RemoteReceiveData &src, bool is_mark, uint8_t bit_position) const {
   if (is_mark) {
     if (src.peek_mark(BIT_ONE_US, bit_position)) {
       return true;
@@ -173,7 +173,7 @@ optional<LucciAirData> LucciAirProtocol::decode(RemoteReceiveData src) {
   // Decode all bits in the sequence
   for (uint8_t i = 0; i < SEQUENCE_LEN; i++) {
     bool is_mark = (i % 2 == 0);
-    auto bit_result = decode_bit(src, is_mark, i);
+    auto bit_result = decode_bit_(src, is_mark, i);
     if (!bit_result.has_value()) {
       return {};
     }
